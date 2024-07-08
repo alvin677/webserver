@@ -1,0 +1,26 @@
+let cert_file = "./path/to/your/certificate.pem";
+let key_file = "./path/to/your/private-key.pem";
+
+let cert_bytes = fs::read(cert_file).expect("Failed to read certificate file");
+let key_bytes = fs::read(key_file).expect("Failed to read private key file");
+
+let certs = certs(&mut BufReader::new(&cert_bytes[..])).expect("Failed to parse certificate");
+let mut keys = rsa_private_keys(&mut BufReader::new(&key_bytes[..])).expect("Failed to parse private key");
+let key = keys.pop().expect("No private key found");
+
+let mut config = ServerConfig::new(NoClientAuth::new());
+config.set_single_cert(certs, key).expect("Failed to set certificate and key");
+
+let listener: TcpListener = TcpListener::bind("127.0.0.1:443").unwrap();
+
+for stream in listener.incoming() {
+    let stream: TcpStream = stream.unwrap();
+    let tls_stream = rustls::ServerSession::new(&config);
+    let tls_stream = rustls::StreamOwned::new(tls_stream, stream);
+    handle_connection(tls_stream);
+}
+
+fn handle_connection(mut stream: rustls::StreamOwned<rustls::ServerSession, TcpStream>) {
+    // Rest of your existing code remains unchanged
+    // ...
+}
